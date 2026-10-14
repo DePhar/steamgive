@@ -1,6 +1,8 @@
 package com.gifthunter.app
 
 import android.os.Bundle
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -51,6 +53,7 @@ data class Giveaway(
 
 data class RegisterRequest(val email: String, val username: String, val password: String)
 data class LoginRequest(val email: String, val password: String)
+data class CreateGiveawayRequest(val title: String, val description: String, val prize_name: String, val cost_points: Int, val winner_count: Int, val ends_at: String)
 data class TokenResponse(val access_token: String, val token_type: String = "bearer")
 data class UserProfile(
     val id: Int,
@@ -72,6 +75,9 @@ interface GiftHunterApi {
 
     @GET("users/me")
     suspend fun me(@Header("Authorization") authorization: String): UserProfile
+
+    @POST("giveaways")
+    suspend fun createGiveaway(@Body request: CreateGiveawayRequest, @Header("Authorization") authorization: String): Giveaway
 
     @POST("giveaways/{id}/enter")
     suspend fun enter(@Path("id") giveawayId: Int, @Header("Authorization") authorization: String): Map<String, String>
@@ -105,6 +111,12 @@ private fun GiftHunterScreen() {
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var showCreateForm by remember { mutableStateOf(false) }
+    var giveawayTitle by remember { mutableStateOf("") }
+    var prizeName by remember { mutableStateOf("") }
+    var giveawayDescription by remember { mutableStateOf("") }
+    var entryCost by remember { mutableStateOf("1") }
+    var winnerCount by remember { mutableStateOf("1") }
 
     suspend fun refresh() {
         loading = true
@@ -141,6 +153,41 @@ private fun GiftHunterScreen() {
             } else {
                 "Вход не удался. Проверьте email и пароль."
             }
+        } finally {
+            loading = false
+        }
+    }
+
+    suspend fun submitGiveaway() {
+        val activeToken = token ?: return
+        val cost = entryCost.toIntOrNull()
+        val winners = winnerCount.toIntOrNull()
+        if (giveawayTitle.trim().length < 3 || prizeName.trim().length < 2 ||
+            cost == null || cost !in 1..10000 || winners == null || winners !in 1..100) {
+            error = "Проверьте название, приз, стоимость (1–10000) и число победителей (1–100)."
+            return
+        }
+        loading = true
+        error = null
+        notice = null
+        try {
+            val request = CreateGiveawayRequest(
+                title = giveawayTitle.trim(),
+                description = giveawayDescription.trim(),
+                prize_name = prizeName.trim(),
+                cost_points = cost,
+                winner_count = winners,
+                ends_at = Instant.now().plus(24, ChronoUnit.HOURS).toString()
+            )
+            withContext(Dispatchers.IO) { api.createGiveaway(request, "Bearer $activeToken") }
+            giveawayTitle = ""
+            prizeName = ""
+            giveawayDescription = ""
+            showCreateForm = false
+            notice = "Раздача опубликована. Она завершится через 24 часа."
+            refresh()
+        } catch (e: Exception) {
+            error = "Не удалось создать раздачу. Проверьте соединение и корректность данных."
         } finally {
             loading = false
         }
@@ -200,11 +247,27 @@ private fun GiftHunterScreen() {
                     Text("Баланс: ${profile?.points ?: 0} баллов")
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = { scope.launch { refresh() } }, enabled = !loading) { Text("Обновить") }
+                        TextButton(onClick = { showCreateForm = !showCreateForm }) {
+                            Text(if (showCreateForm) "Отмена" else "Создать раздачу")
+                        }
                         TextButton(onClick = {
                             token = null
                             profile = null
+                            showCreateForm = false
                             notice = "Вы вышли из аккаунта."
                         }) { Text("Выйти") }
+                    }
+                    if (showCreateForm) {
+                        Text("Новая раздача", style = MaterialTheme.typography.titleMedium)
+                        OutlinedTextField(value = giveawayTitle, onValueChange = { giveawayTitle = it }, label = { Text("Название (минимум 3 символа)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = prizeName, onValueChange = { prizeName = it }, label = { Text("Приз") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = giveawayDescription, onValueChange = { giveawayDescription = it }, label = { Text("Описание (необязательно)") }, modifier = Modifier.fillMaxWidth())
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(value = entryCost, onValueChange = { entryCost = it.filter(Char::isDigit) }, label = { Text("Баллы за вход") }, singleLine = true, modifier = Modifier.weight(1f))
+                            OutlinedTextField(value = winnerCount, onValueChange = { winnerCount = it.filter(Char::isDigit) }, label = { Text("Победителей") }, singleLine = true, modifier = Modifier.weight(1f))
+                        }
+                        Text("Срок раздачи — 24 часа с момента публикации.")
+                        Button(onClick = { scope.launch { submitGiveaway() } }, enabled = !loading) { Text("Опубликовать") }
                     }
                 }
 
@@ -214,7 +277,7 @@ private fun GiftHunterScreen() {
 
                 Text("Раздачи", style = MaterialTheme.typography.titleLarge)
                 if (!loading && error == null && giveaways.isEmpty()) {
-                    Text("Пока нет раздач. Создание раздач доступно через API.")
+                    Text("Пока нет раздач. Создайте первую раздачу кнопкой выше.")
                 }
                 LazyColumn(
                     contentPadding = PaddingValues(bottom = 24.dp),
