@@ -38,3 +38,4 @@ This is an MVP, not yet a production launch. Steam OpenID, password reset, email
 - `POST /giveaways`
 - `POST /giveaways/{id}/enter`
 - `POST /giveaways/{id}/draw`
+- `GET /giveaways/{id}/winners`
