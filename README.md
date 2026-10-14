@@ -1,17 +1,40 @@
 # GiftHunter
 
-GiftHunter is an Android-first giveaway platform prototype. This repository currently contains the backend bootstrap; the Android client and production infrastructure are still to be built.
+GiftHunter is an Android-first giveaway platform MVP in active development.
 
-## Stack
-- FastAPI / Python
-- PostgreSQL
-- SQLAlchemy async
-- JWT access tokens and Argon2 password hashes
-- Docker Compose for local development
+## Repository contents
 
-## Run locally
-1. Copy `.env.example` to `.env` and replace the secrets.
-2. Run `docker compose up --build`.
-3. Open `http://localhost:8000/docs` for the interactive API docs and `http://localhost:8000/health` for the health check.
+- `backend/`: FastAPI API with PostgreSQL/SQLAlchemy, password hashing, JWT auth, user profiles, giveaway listing/creation, paid entries using internal points, and winner drawing after a giveaway closes.
+- `android/`: Kotlin + Jetpack Compose app with registration, login, giveaway listing, points display, and entry submission.
+- `docker-compose.yml`: local PostgreSQL and API services.
+- `.github/workflows/`: backend test workflow and Android debug APK build workflow.
 
-Never use example secrets in a public deployment. Before production, add database migrations, rate limiting, email verification/password recovery, admin provisioning, audit logging, and automated tests. Steam OpenID and the Android client are not implemented yet.
+## Run the backend locally
+
+1. Install Docker Desktop or Docker Engine with the Compose plugin.
+2. Copy `.env.example` to `.env`.
+3. Replace `POSTGRES_PASSWORD`, update the password in `DATABASE_URL` to match it, and set `JWT_SECRET` to a cryptographically random value of at least 32 characters.
+4. Run `docker compose up --build`.
+5. Open `http://localhost:8000/docs` for the interactive API docs or `http://localhost:8000/health` for the health check.
+
+The API requires `DATABASE_URL` and a `JWT_SECRET` of at least 32 characters. Never commit `.env` or use example secrets outside local development.
+
+## Android app
+
+Open the `android/` directory in Android Studio and sync Gradle. The debug app currently targets the Android emulator's host API at `http://10.0.2.2:8000/`. For a physical device, configure the API base URL to the development computer's LAN IP. Release builds must use HTTPS; the current cleartext setting is for local development only.
+
+A successful Android GitHub Actions run publishes `GiftHunter-debug-apk` as a workflow artifact. The APK is not committed to this repository.
+
+## Current limitations
+
+This is an MVP, not yet a production launch. Steam OpenID, password reset, email verification, user-facing giveaway creation, winner/prize fulfilment, moderation/admin provisioning, Alembic migrations, rate limiting, persistent Android login, and production HTTPS/deployment configuration remain to be implemented. The API currently creates tables automatically for development; do not use that in place of migrations for production.
+
+## API overview
+
+- `POST /auth/register`
+- `POST /auth/login`
+- `GET /users/me`
+- `GET /giveaways`
+- `POST /giveaways`
+- `POST /giveaways/{id}/enter`
+- `POST /giveaways/{id}/draw`
