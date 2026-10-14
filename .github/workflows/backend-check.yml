@@ -3,13 +3,23 @@ on:
   push:
   pull_request:
 jobs:
-  compile:
+  test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: sqlite+aiosqlite:///./ci_gifthunter.db
+      JWT_SECRET: ci-only-secret-that-is-long-enough
+      ACCESS_TOKEN_MINUTES: "5"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
       - run: python -m pip install --upgrade pip
-      - run: pip install -r backend/requirements.txt
-      - run: python -m compileall -q backend/app
+      - run: pip install -r requirements.txt
+      - run: python -m compileall -q app tests
+      - run: pytest -q
