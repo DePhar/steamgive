@@ -39,7 +39,7 @@ import retrofit2.http.Path
 
 // Emulator URL. For a physical device use the computer's LAN IP during development.
 // Production builds must use an HTTPS API endpoint.
-private const val API_BASE_URL = "http://10.0.2.2:8000/"
+private val API_BASE_URL = BuildConfig.API_BASE_URL
 
 data class Giveaway(
     val id: Int,
