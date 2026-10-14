@@ -8,3 +8,8 @@ __pycache__/
 .gradle/
 build/
 dist/
+
+*.db
+*.apk
+android/.gradle/
+android/local.properties
