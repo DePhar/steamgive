@@ -1,7 +1,8 @@
 import os
+import uuid
 from datetime import datetime, timedelta, timezone
 
-os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test_gifthunter.db"
+os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///./test_gifthunter_{uuid.uuid4().hex}.db"
 os.environ["JWT_SECRET"] = "test-secret-that-is-long-enough-for-ci"
 os.environ["ACCESS_TOKEN_MINUTES"] = "5"
 
