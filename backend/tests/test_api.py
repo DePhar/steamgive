@@ -135,3 +135,25 @@ def test_draw_results_are_persisted(client):
     results = client.get(f"/giveaways/{giveaway_id}/winners")
     assert results.status_code == 200
     assert results.json()["winner_user_ids"] == []
+
+
+def test_draw_selects_and_persists_an_entered_winner(client):
+    register(client, "real_draw_owner", "real_draw_owner@example.com")
+    register(client, "real_draw_entrant", "real_draw_entrant@example.com")
+    owner_token = login(client, "real_draw_owner@example.com")
+    entrant_token = login(client, "real_draw_entrant@example.com")
+    giveaway = create_giveaway(client, owner_token, datetime.now(timezone.utc) + timedelta(seconds=2))
+    assert giveaway.status_code == 201, giveaway.text
+    giveaway_id = giveaway.json()["id"]
+
+    entered = client.post(f"/giveaways/{giveaway_id}/enter", headers=auth(entrant_token))
+    assert entered.status_code == 201, entered.text
+    time.sleep(2.1)
+
+    drawn = client.post(f"/giveaways/{giveaway_id}/draw", headers=auth(owner_token))
+    assert drawn.status_code == 200, drawn.text
+    assert len(drawn.json()["winner_user_ids"]) == 1
+
+    persisted = client.get(f"/giveaways/{giveaway_id}/winners")
+    assert persisted.status_code == 200
+    assert persisted.json()["winner_user_ids"] == drawn.json()["winner_user_ids"]
