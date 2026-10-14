@@ -21,6 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -62,6 +63,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun GiftHunterScreen() {
+    val scope = rememberCoroutineScope()
     var giveaways by remember { mutableStateOf<List<Giveaway>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -88,7 +90,7 @@ private fun GiftHunterScreen() {
             ) {
                 Text("GiftHunter", style = MaterialTheme.typography.headlineLarge)
                 Text("Охоться за раздачами", style = MaterialTheme.typography.titleMedium)
-                Button(onClick = { kotlinx.coroutines.MainScope().launch { refresh() } }) {
+                Button(onClick = { scope.launch { refresh() } }) {
                     Text("Обновить")
                 }
                 if (loading) CircularProgressIndicator()
