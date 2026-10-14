@@ -21,7 +21,7 @@ The API requires `DATABASE_URL` and a `JWT_SECRET` of at least 32 characters. Ne
 
 ## Android app
 
-Open the `android/` directory in Android Studio and sync Gradle. The debug app currently targets the Android emulator's host API at `http://10.0.2.2:8000/`. For a physical device, configure the API base URL to the development computer's LAN IP. Logged-in users can create giveaways from the app; the current form sets a fixed 24-hour duration. Release builds must use HTTPS; the current cleartext setting is for local development only.
+Open the `android/` directory in Android Studio and sync Gradle. By default, the app targets the Android emulator's host API at `http://10.0.2.2:8000/`. To use a physical device on the same Wi-Fi network as the development computer, pass the computer's LAN address as a Gradle property, for example `-PapiBaseUrl=http://192.168.1.10:8000/` (replace the IP with the actual address). Ensure the backend listens on the LAN interface and the computer firewall allows the port. HTTP is enabled only in debug builds for local development; the main manifest disables cleartext traffic by default. Use an HTTPS endpoint for release builds. Logged-in users can create giveaways from the app; the current form sets a fixed 24-hour duration.
 
 A successful Android GitHub Actions run publishes `GiftHunter-debug-apk` as a workflow artifact. The APK is not committed to this repository.
 
