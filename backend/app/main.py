@@ -174,6 +174,13 @@ async def create_schema() -> None:
         await connection.run_sync(Base.metadata.create_all)
 
 
+def utc_datetime(value: datetime) -> datetime:
+    """Normalize database datetimes (SQLite may drop timezone info) to UTC."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
 app = FastAPI(title="GiftHunter API", version="0.1.0", description="Android-first giveaway platform prototype")
 
 
@@ -253,7 +260,7 @@ async def enter_giveaway(giveaway_id: int, user: User = Depends(get_current_user
     giveaway = await db.scalar(select(Giveaway).where(Giveaway.id == giveaway_id).with_for_update())
     if locked_user is None or giveaway is None:
         raise HTTPException(status_code=404, detail="User or giveaway not found")
-    if giveaway.drawn_at is not None or giveaway.ends_at <= datetime.now(timezone.utc):
+    if giveaway.drawn_at is not None or utc_datetime(giveaway.ends_at) <= datetime.now(timezone.utc):
         raise HTTPException(status_code=409, detail="Giveaway is closed")
     if giveaway.creator_id == locked_user.id:
         raise HTTPException(status_code=409, detail="Creators cannot enter their own giveaway")
@@ -278,7 +285,7 @@ async def draw_winners(giveaway_id: int, user: User = Depends(get_current_user),
         raise HTTPException(status_code=403, detail="Only the creator or an admin can draw winners")
     if giveaway.drawn_at is not None:
         raise HTTPException(status_code=409, detail="Winners have already been drawn")
-    if giveaway.ends_at > datetime.now(timezone.utc):
+    if utc_datetime(giveaway.ends_at) > datetime.now(timezone.utc):
         raise HTTPException(status_code=409, detail="Giveaway has not ended yet")
     result = await db.scalars(select(Entry.user_id).where(Entry.giveaway_id == giveaway_id))
     entrants = list(result.all())
