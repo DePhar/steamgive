@@ -4,6 +4,16 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val apiBaseUrl = providers.gradleProperty("apiBaseUrl")
+    .orElse("http://10.0.2.2:8000/")
+    .get()
+require(apiBaseUrl.startsWith("https://") || apiBaseUrl.startsWith("http://")) {
+    "apiBaseUrl must be an absolute HTTP(S) URL"
+}
+require(apiBaseUrl.endsWith("/")) {
+    "apiBaseUrl must end with a slash"
+}
+
 android {
     namespace = "com.gifthunter.app"
     compileSdk = 35
@@ -14,6 +24,7 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
     }
 
     compileOptions {
@@ -25,7 +36,10 @@ android {
         jvmTarget = "17"
     }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 }
 
 dependencies {
