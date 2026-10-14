@@ -68,6 +68,15 @@ class Entry(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
+class Winner(Base):
+    __tablename__ = "winners"
+    __table_args__ = (UniqueConstraint("giveaway_id", "user_id", name="uq_winner_giveaway_user"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    giveaway_id: Mapped[int] = mapped_column(ForeignKey("giveaways.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+
 class Ledger(Base):
     __tablename__ = "ledger"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -274,6 +283,19 @@ async def draw_winners(giveaway_id: int, user: User = Depends(get_current_user),
     result = await db.scalars(select(Entry.user_id).where(Entry.giveaway_id == giveaway_id))
     entrants = list(result.all())
     winners = secrets.SystemRandom().sample(entrants, min(giveaway.winner_count, len(entrants)))
-    giveaway.drawn_at = datetime.now(timezone.utc)
+    drawn_at = datetime.now(timezone.utc)
+    db.add_all(Winner(giveaway_id=giveaway.id, user_id=winner_id, created_at=drawn_at) for winner_id in winners)
+    giveaway.drawn_at = drawn_at
     await db.commit()
-    return DrawOut(giveaway_id=giveaway.id, winner_user_ids=winners, drawn_at=giveaway.drawn_at)
+    return DrawOut(giveaway_id=giveaway.id, winner_user_ids=winners, drawn_at=drawn_at)
+
+
+@app.get("/giveaways/{giveaway_id}/winners", response_model=DrawOut)
+async def get_winners(giveaway_id: int, db: AsyncSession = Depends(get_db)) -> DrawOut:
+    giveaway = await db.get(Giveaway, giveaway_id)
+    if giveaway is None:
+        raise HTTPException(status_code=404, detail="Giveaway not found")
+    if giveaway.drawn_at is None:
+        raise HTTPException(status_code=409, detail="Winners have not been drawn yet")
+    result = await db.scalars(select(Winner.user_id).where(Winner.giveaway_id == giveaway_id).order_by(Winner.id))
+    return DrawOut(giveaway_id=giveaway.id, winner_user_ids=list(result.all()), drawn_at=giveaway.drawn_at)
