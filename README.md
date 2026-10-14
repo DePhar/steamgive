@@ -5,7 +5,7 @@ GiftHunter is an Android-first giveaway platform MVP in active development.
 ## Repository contents
 
 - `backend/`: FastAPI API with PostgreSQL/SQLAlchemy, password hashing, JWT auth, user profiles, giveaway listing/creation, paid entries using internal points, and winner drawing after a giveaway closes.
-- `android/`: Kotlin + Jetpack Compose app with registration, login, giveaway listing, points display, and entry submission.
+- `android/`: Kotlin + Jetpack Compose app with registration, login, giveaway listing, points display, entry submission, and in-app giveaway creation.
 - `docker-compose.yml`: local PostgreSQL and API services.
 - `.github/workflows/`: backend test workflow and Android debug APK build workflow.
 
@@ -21,13 +21,13 @@ The API requires `DATABASE_URL` and a `JWT_SECRET` of at least 32 characters. Ne
 
 ## Android app
 
-Open the `android/` directory in Android Studio and sync Gradle. The debug app currently targets the Android emulator's host API at `http://10.0.2.2:8000/`. For a physical device, configure the API base URL to the development computer's LAN IP. Release builds must use HTTPS; the current cleartext setting is for local development only.
+Open the `android/` directory in Android Studio and sync Gradle. The debug app currently targets the Android emulator's host API at `http://10.0.2.2:8000/`. For a physical device, configure the API base URL to the development computer's LAN IP. Logged-in users can create giveaways from the app; the current form sets a fixed 24-hour duration. Release builds must use HTTPS; the current cleartext setting is for local development only.
 
 A successful Android GitHub Actions run publishes `GiftHunter-debug-apk` as a workflow artifact. The APK is not committed to this repository.
 
 ## Current limitations
 
-This is an MVP, not yet a production launch. Steam OpenID, password reset, email verification, user-facing giveaway creation, winner/prize fulfilment, moderation/admin provisioning, Alembic migrations, rate limiting, persistent Android login, and production HTTPS/deployment configuration remain to be implemented. The API currently creates tables automatically for development; do not use that in place of migrations for production.
+This is an MVP, not yet a production launch. Steam OpenID, password reset, email verification, editing/canceling giveaways, winner/prize fulfilment, moderation/admin provisioning, Alembic migrations, rate limiting, persistent Android login, and production HTTPS/deployment configuration remain to be implemented. The API currently creates tables automatically for development; do not use that in place of migrations for production.
 
 ## API overview
 
