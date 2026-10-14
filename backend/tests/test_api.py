@@ -1,3 +1,4 @@
+import asyncio
 import os
 from datetime import datetime, timedelta, timezone
 
@@ -18,13 +19,17 @@ def client():
 
 
 @pytest.fixture(autouse=True)
-async def clean_database():
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.drop_all)
-        await connection.run_sync(Base.metadata.create_all)
+def clean_database():
+    async def reset():
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.drop_all)
+            await connection.run_sync(Base.metadata.create_all)
+    asyncio.run(reset())
     yield
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.drop_all)
+    async def cleanup():
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.drop_all)
+    asyncio.run(cleanup())
 
 
 def register(client, username, email):
