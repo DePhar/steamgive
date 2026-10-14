@@ -11,14 +11,15 @@ from pwdlib import PasswordHash
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Settings(BaseSettings):
-    database_url: str = "postgresql+asyncpg://gifthunter:gifthunter@localhost:5432/gifthunter"
-    jwt_secret: str = "development-only-change-me-please-32chars"
-    access_token_minutes: int = 60
+    database_url: str
+    jwt_secret: str = Field(min_length=32)
+    access_token_minutes: int = Field(default=60, ge=5, le=1440)
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
@@ -190,9 +191,13 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
         raise HTTPException(status_code=409, detail="Email or username is already registered")
     user = User(email=email, username=payload.username, password_hash=password_hash.hash(payload.password), points=100)
     db.add(user)
-    await db.flush()
-    db.add(Ledger(user_id=user.id, amount=100, reason="welcome_bonus"))
-    await db.commit()
+    try:
+        await db.flush()
+        db.add(Ledger(user_id=user.id, amount=100, reason="welcome_bonus"))
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Email or username is already registered")
     await db.refresh(user)
     return user
 
