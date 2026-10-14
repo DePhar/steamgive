@@ -3,7 +3,7 @@
     <application
         android:allowBackup="false"
         android:label="GiftHunter"
-        android:usesCleartextTraffic="true"
+        android:usesCleartextTraffic="false"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity
             android:name=".MainActivity"
