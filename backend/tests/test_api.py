@@ -1,5 +1,6 @@
 import os
 import uuid
+import time
 from datetime import datetime, timedelta, timezone
 
 os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///./test_gifthunter_{uuid.uuid4().hex}.db"
@@ -120,3 +121,17 @@ def test_draw_requires_creator_and_end_time(client):
     assert forbidden.status_code == 403
     too_early = client.post(f"/giveaways/{giveaway_id}/draw", headers=auth(creator_token))
     assert too_early.status_code == 409
+
+
+def test_draw_results_are_persisted(client):
+    register(client, "draw_owner", "draw_owner@example.com")
+    token = login(client, "draw_owner@example.com")
+    giveaway = create_giveaway(client, token, datetime.now(timezone.utc) + timedelta(seconds=2))
+    giveaway_id = giveaway.json()["id"]
+    time.sleep(2.1)
+    drawn = client.post(f"/giveaways/{giveaway_id}/draw", headers=auth(token))
+    assert drawn.status_code == 200, drawn.text
+    assert drawn.json()["winner_user_ids"] == []
+    results = client.get(f"/giveaways/{giveaway_id}/winners")
+    assert results.status_code == 200
+    assert results.json()["winner_user_ids"] == []
